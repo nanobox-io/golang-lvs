@@ -8,7 +8,7 @@
 // @end
 // Created :   7 August 2015 by Daniel Barney <daniel@nanobox.io>
 //--------------------------------------------------------------------
-package ipvsadm
+package lvs
 
 import (
 	"bufio"
