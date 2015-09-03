@@ -27,8 +27,10 @@ var (
 	backendRun = run
 )
 
+// Load verifies that lvs can be used, and populates it with values
+// from the backup file
 func Load() error {
-	if err := Check(); err != nil {
+	if err := check(); err != nil {
 		return err
 	}
 
@@ -36,17 +38,20 @@ func Load() error {
 	// populate the ipvsadm command with what was stored in the backup
 	return nil
 }
-func Check() error {
+
+func check() error {
 	if err := backend("which", "ipvsadm"); err != nil {
 		return IpvsadmMissing
 	}
 	return nil
 }
 
+// Get a list of all Vips on the system
 func ListVips() ([]Vip, error) {
 	return parse(parseAll, "ipvsadm", "-ln")
 }
 
+//Add a Vip to the system
 func AddVip(host string, port int) (*Vip, error) {
 	id := fmt.Sprintf("%v:%v", host, port)
 	// check if it already exists, this also validates the id
@@ -68,6 +73,7 @@ func AddVip(host string, port int) (*Vip, error) {
 	return GetVip(id)
 }
 
+//Get a Vip on the system, or nil, NotFound if it is not found
 func GetVip(id string) (*Vip, error) {
 	if err := validateId(id); err != nil {
 		return nil, err
@@ -85,6 +91,7 @@ func GetVip(id string) (*Vip, error) {
 	return nil, NotFound
 }
 
+//Remove a Vip from the system
 func DeleteVip(id string) error {
 	_, err := GetVip(id)
 	if err == NotFound {
@@ -107,6 +114,7 @@ func DeleteVip(id string) error {
 	return nil
 }
 
+//Get backend destination servers for the specified Vip
 func ListServers(vid string) ([]Server, error) {
 	vip, err := GetVip(vid)
 	if err != nil {
@@ -115,6 +123,7 @@ func ListServers(vid string) ([]Server, error) {
 	return vip.Servers, nil
 }
 
+//Add a backend destination server for the specified Vip
 func AddServer(vid, host string, port int) (*Server, error) {
 	id := fmt.Sprintf("%v:%v", host, port)
 	server, err := GetServer(vid, id)
@@ -132,6 +141,7 @@ func AddServer(vid, host string, port int) (*Server, error) {
 	return GetServer(vid, id)
 }
 
+//Get a backend server that is a memner of the specified Vip
 func GetServer(vid, id string) (*Server, error) {
 	if err := validateId(id); err != nil {
 		return nil, err
@@ -148,6 +158,9 @@ func GetServer(vid, id string) (*Server, error) {
 	return nil, NotFound
 }
 
+//Disabled servers continue to serve current connections, but no new
+//connections are sent to it. THis is exposed to allow draining of a
+//backend server before removing it from the pool completely.
 func EnableServer(vid, id string, enable bool) error {
 	if _, err := GetServer(vid, id); err != nil {
 		return err
@@ -168,6 +181,7 @@ func EnableServer(vid, id string, enable bool) error {
 	return nil
 }
 
+//Remove a backend server from a Vip.
 func DeleteServer(vid, id string) error {
 	if _, err := GetServer(vid, id); err != nil {
 		return err
