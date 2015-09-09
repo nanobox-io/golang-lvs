@@ -133,7 +133,7 @@ func AddServer(vid, host string, port int) (*Server, error) {
 		return nil, err
 	}
 
-	if err := backend("ipvsadm", "-a", "-t", vid, "-r", id, "-w", "0", "-m"); err != nil {
+	if err := backend("ipvsadm", "-a", "-t", vid, "-r", id, "-w", "100", "-m"); err != nil {
 		return nil, err // I should return my own error here
 	}
 
