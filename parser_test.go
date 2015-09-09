@@ -26,6 +26,15 @@ TCP  212.204.230.98:443 wrr persistent 123
 `
 )
 
+func TestEmpty(test *testing.T) {
+	reader := strings.NewReader(header)
+	scanner := bufio.NewScanner(reader)
+	scanner.Split(bufio.ScanWords)
+	vips, err := parseAll(scanner)
+	assert(test, err == nil, "there was an error %v", err)
+	assert(test, len(vips) == 0, "wrong number of vips was returned %v", vips)
+}
+
 func TestParser(test *testing.T) {
 	all := []string{header, cmd}
 	reader := strings.NewReader(strings.Join(all, ""))

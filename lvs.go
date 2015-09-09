@@ -133,7 +133,7 @@ func AddServer(vid, host string, port int) (*Server, error) {
 		return nil, err
 	}
 
-	if err := backend("ipvsadm", "-a", "-t", vid, "-r", id, "-w", "0"); err != nil {
+	if err := backend("ipvsadm", "-a", "-t", vid, "-r", id, "-w", "0", "-m"); err != nil {
 		return nil, err // I should return my own error here
 	}
 
@@ -206,7 +206,7 @@ func parse(fun func(*bufio.Scanner) ([]Vip, error), args ...string) ([]Vip, erro
 }
 
 func run(args []string) (io.ReadCloser, error) {
-	cmd := exec.Command("ipvsadm", args...)
+	cmd := exec.Command(args[0], args[1:]...)
 	pipe, err := cmd.StdoutPipe()
 	cmd.Start()
 	return pipe, err
