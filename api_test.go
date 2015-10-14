@@ -111,9 +111,8 @@ func fake(exec string, args ...string) error {
 	}
 }
 
-func fakeRun(args []string) (io.ReadCloser, error) {
-	reader := strings.NewReader(listAll())
-	return nopCloser{reader}, nil
+func fakeRun(args []string) ([]byte, error) {
+	return []byte(listAll()), nil
 }
 
 func TestApi(test *testing.T) {

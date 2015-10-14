@@ -8,9 +8,10 @@ package lvs
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net"
 	"os/exec"
 )
@@ -196,20 +197,27 @@ func DeleteServer(vid, id string) error {
 }
 
 func parse(fun func(*bufio.Scanner) ([]Vip, error), args ...string) ([]Vip, error) {
-	pipe, err := backendRun(args)
+	output, err := backendRun(args)
 	if err != nil {
 		return nil, err
 	}
+	pipe := ioutil.NopCloser(bytes.NewReader(output))
 	scanner := bufio.NewScanner(pipe)
 	scanner.Split(bufio.ScanWords)
-	return fun(scanner)
+	vips, err := fun(scanner)
+	if err != nil {
+		return []Vip{}, errors.New("failed to parse: " + string(output))
+	}
+	return vips, err
 }
 
-func run(args []string) (io.ReadCloser, error) {
+func run(args []string) ([]byte, error) {
 	cmd := exec.Command(args[0], args[1:]...)
-	pipe, err := cmd.StdoutPipe()
-	cmd.Start()
-	return pipe, err
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, errors.New(err.Error() + " output: " + string(output))
+	}
+	return output, err
 }
 
 func execute(exe string, args ...string) error {
