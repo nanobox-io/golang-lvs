@@ -71,7 +71,7 @@ func addServer(vid, sid, w string) error {
 	}
 
 	vip := storage[vid]
-	server := Server{host, port, "Masq", weight, 0, 0}
+	server := Server{Host: host, Port: port, Forwarder: "Masq", Weight: weight, ActiveConnections: 0, InactiveConnections: 0}
 	vip.Servers = append(vip.Servers, server)
 	storage[vid] = vip
 	return nil
