@@ -11,9 +11,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os/exec"
+	"strings"
 )
 
 var (
@@ -45,6 +47,30 @@ func check() error {
 		return IpvsadmMissing
 	}
 	return nil
+}
+
+func SetTimeouts() error {
+	return DefaultIpvs.SetTimeouts()
+}
+
+func StartDaemon() (error, error) {
+	return DefaultIpvs.StartDaemon()
+}
+
+func StopDaemon() (error, error) {
+	return DefaultIpvs.StopDaemon()
+}
+
+func Clear() error {
+	return DefaultIpvs.Clear()
+}
+
+func Restore(services []Service) error {
+	return DefaultIpvs.Restore(services)
+}
+
+func Save() error {
+	return DefaultIpvs.Save()
 }
 
 // Get a list of all Vips on the system
@@ -225,6 +251,28 @@ func execute(exe string, args ...string) error {
 	return cmd.Run()
 }
 
+func executeStdin(in, exe string, args ...string) error {
+	var err error
+	var total, part, segment int
+	var stdin io.WriteCloser
+
+	cmd := exec.Command(exe, args...)
+	stdin, err = cmd.StdinPipe()
+	defer stdin.Close()
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+
+	total = len(in)
+	for part = 0; part != total; part += segment {
+		segment, err = stdin.Write([]byte(in[part:total]))
+		if err != nil {
+			return err
+		}
+	}
+	return cmd.Wait()
+}
+
 func validateId(id string) error {
 	_, _, err := net.SplitHostPort(id)
 	return err
@@ -232,4 +280,23 @@ func validateId(id string) error {
 
 func backup() {
 	//NYI
+}
+
+func Zero() error {
+	return backend("ipvsadm", "-Z")
+}
+
+func (s Service) Add() error {
+	netmask := strings.Split(s.getNetmask(), " ")
+	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(),
+		ServiceSchedulerFlag[s.Scheduler], "-p", fmt.Sprintf("%d", s.Persistance)},
+		netmask...)...)
+}
+
+func (s Service) Remove() error {
+	return backend("ipvsadm", "-D", ServiceTypeFlag[s.Type], s.getHostPort())
+}
+
+func (s Service) Zero() error {
+	return backend("ipvsadm", "-Z", ServiceTypeFlag[s.Type], s.getHostPort())
 }

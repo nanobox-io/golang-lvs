@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 )
@@ -133,7 +134,7 @@ func parseRealServer(scan *bufio.Scanner) (*Server, error) {
 		return nil, err
 	}
 	// leave 0 on so that the parseVips loop removes it.
-	return &Server{host, port, forwarder, weight, innactive, active}, nil
+	return &Server{Host: host, Port: port, Forwarder: forwarder, Weight: weight, InactiveConnections: innactive, ActiveConnections: active}, nil
 }
 
 // discard the entire ipvsadm header, leaves one token on so that the
@@ -152,4 +153,16 @@ func parseAll(scan *bufio.Scanner) ([]Vip, error) {
 		return nil, err
 	}
 	return parseVips(scan)
+}
+
+func parseHostPort(hostPort string) (string, int) {
+	host, port, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		return hostPort, 0
+	}
+	intPort, err := strconv.Atoi(port)
+	if err != nil {
+		return hostPort, 0
+	}
+	return host, intPort
 }

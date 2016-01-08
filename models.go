@@ -9,27 +9,20 @@ package lvs
 import (
 	"encoding/json"
 	"fmt"
+	// "strings"
 )
 
 type (
 	ToJson interface {
 		ToJson() ([]byte, error)
 	}
+
 	FromJson interface {
 		FromJson([]byte) error
 	}
 
 	ider interface {
 		getId() string
-	}
-
-	Server struct {
-		Host                string `json:"host"`
-		Port                int    `json:"port"`
-		Forwarder           string `json:"forwarder"`
-		Weight              int    `json:"weight"`
-		InactiveConnections int    `json:"innactive_connections"`
-		ActiveConnections   int    `json:"active_connections"`
 	}
 
 	Vip struct {
@@ -40,16 +33,6 @@ type (
 		Servers     []Server `json:"servers"`
 	}
 )
-
-func (s *Server) FromJson(bytes []byte) error {
-	return json.Unmarshal(bytes, s)
-}
-func (s Server) ToJson() ([]byte, error) {
-	return json.Marshal(s)
-}
-func (s Server) getId() string {
-	return fmt.Sprintf("%v:%v", s.Host, s.Port)
-}
 
 func (v *Vip) FromJson(bytes []byte) error {
 	return json.Unmarshal(bytes, v)
