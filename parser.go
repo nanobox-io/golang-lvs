@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Pagoda Box Inc
+// Copyright (c) 2016 Pagoda Box Inc
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License, v.
 // 2.0. If a copy of the MPL was not distributed with this file, You can obtain one
@@ -7,11 +7,9 @@
 package lvs
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
+	"net"
 	"strconv"
-	"strings"
 )
 
 var (
@@ -19,137 +17,14 @@ var (
 	UnexpecedToken = errors.New("Unexpected Token")
 )
 
-// parse a vip line `TCP 127.0.0.1:1234 wrr` the cursor comes pre
-// advanced so that scan.Bytes() would return TCP.
-func parseVip(scan *bufio.Scanner) (*Vip, error) {
-
-	// skip TCP
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-
-	// record id
-	id := scan.Text()
-	split := strings.Split(id, ":")
-	host := split[0]
-	port, err := strconv.Atoi(split[1])
+func parseHostPort(hostPort string) (string, int) {
+	host, port, err := net.SplitHostPort(hostPort)
 	if err != nil {
-		return nil, err
+		return hostPort, 0
 	}
-
-	// advance to next token
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-	schedular := scan.Text()
-
-	// skip the string literal "persistant"
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-	persistance, err := strconv.Atoi(scan.Text())
+	intPort, err := strconv.Atoi(port)
 	if err != nil {
-		return nil, err
+		return hostPort, 0
 	}
-
-	return &Vip{host, port, schedular, persistance, nil}, nil
-}
-
-// parse a list of vips and real servers, which is the default output
-// of ipvsadm -ln
-func parseVips(scan *bufio.Scanner) ([]Vip, error) {
-	var currentVip *Vip = nil
-	vips := make([]Vip, 0)
-	for scan.Scan() {
-		switch {
-		case bytes.Equal(scan.Bytes(), []byte("TCP")):
-			newVip, err := parseVip(scan)
-			if err != nil {
-				return nil, err
-			}
-			if currentVip != nil {
-				vips = append(vips, *currentVip)
-			}
-			currentVip = newVip
-		case bytes.Equal(scan.Bytes(), []byte("->")):
-			server, err := parseRealServer(scan)
-			if err != nil {
-				return nil, err
-			}
-			currentVip.Servers = append(currentVip.Servers, *server)
-		default:
-			return nil, UnexpecedToken
-		}
-	}
-	if currentVip != nil {
-		vips = append(vips, *currentVip)
-	}
-	return vips, nil
-}
-
-// parse a real server declaration line `-> 10.0.0.1:1234 Masq 0 0 0`
-// the cursor comes pre advanced so that scan.Bytes() would return ->.
-func parseRealServer(scan *bufio.Scanner) (*Server, error) {
-	// advance to 10.0.0.1:1234
-	scan.Scan()
-	id := scan.Text()
-	split := strings.Split(id, ":")
-	host := split[0]
-	port, err := strconv.Atoi(split[1])
-	if err != nil {
-		return nil, err
-	}
-	// advance to Masq
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-	forwarder := scan.Text()
-
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-	weight, err := strconv.Atoi(scan.Text())
-	if err != nil {
-		return nil, err
-	}
-
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-	innactive, err := strconv.Atoi(scan.Text())
-	if err != nil {
-		return nil, err
-	}
-
-	if !scan.Scan() {
-		return nil, EOFError
-	}
-	active, err := strconv.Atoi(scan.Text())
-	if err != nil {
-		return nil, err
-	}
-	// leave 0 on so that the parseVips loop removes it.
-	return &Server{host, port, forwarder, weight, innactive, active}, nil
-}
-
-// discard the entire ipvsadm header, leaves one token on so that the
-// parse Vips loop removes it correctly.
-func discardHeader(scan *bufio.Scanner) error {
-	for i := 0; i < 16; i++ {
-		if !scan.Scan() {
-			return EOFError
-		}
-	}
-	return nil
-}
-
-func parseAll(scan *bufio.Scanner) ([]Vip, error) {
-	if err := discardHeader(scan); err != nil {
-		return nil, err
-	}
-	return parseVips(scan)
+	return host, intPort
 }
