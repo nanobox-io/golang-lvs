@@ -1,3 +1,9 @@
+// Copyright (c) 2016 Pagoda Box Inc
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License, v.
+// 2.0. If a copy of the MPL was not distributed with this file, You can obtain one
+// at http://mozilla.org/MPL/2.0/.
+//
 package lvs
 
 import (
@@ -52,6 +58,10 @@ func (s Service) FindServer(server Server) *Server {
 }
 
 func (s *Service) AddServer(server Server) error {
+	testServer := s.FindServer(server)
+	if testServer != nil {
+		return nil
+	}
 	s.Servers = append(s.Servers, server)
 	return backend("ipvsadm", append([]string{"-a", ServiceTypeFlag[s.Type], s.getHostPort(), "-r"}, strings.Split(server.String(), " ")...)...)
 }
@@ -84,10 +94,6 @@ func (s Service) ToJson() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-func (s Service) getId() string {
-	return fmt.Sprintf("%v:%v", s.Host, s.Port)
-}
-
 func (s Service) getNetmask() string {
 	if s.Netmask != "" {
 		return fmt.Sprintf("-M %s", s.Netmask)
@@ -114,6 +120,21 @@ func (s Service) String() string {
 			s.Servers[i].String()))
 	}
 	return strings.Join(a, "")
+}
+
+func (s Service) Add() error {
+	netmask := strings.Split(s.getNetmask(), " ")
+	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(),
+		ServiceSchedulerFlag[s.Scheduler], "-p", fmt.Sprintf("%d", s.Persistance)},
+		netmask...)...)
+}
+
+func (s Service) Remove() error {
+	return backend("ipvsadm", "-D", ServiceTypeFlag[s.Type], s.getHostPort())
+}
+
+func (s Service) Zero() error {
+	return backend("ipvsadm", "-Z", ServiceTypeFlag[s.Type], s.getHostPort())
 }
 
 func parseService(serviceString string) Service {

@@ -1,3 +1,9 @@
+// Copyright (c) 2016 Pagoda Box Inc
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License, v.
+// 2.0. If a copy of the MPL was not distributed with this file, You can obtain one
+// at http://mozilla.org/MPL/2.0/.
+//
 package lvs
 
 import (
@@ -37,16 +43,12 @@ func (s Server) ToJson() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-func (s Server) getId() string {
-	return fmt.Sprintf("%v:%v", s.Host, s.Port)
-}
-
 func (s Server) getHostPort() string {
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)
 }
 
 func (s Server) String() string {
-	return fmt.Sprintf("%s %s -y %s -x %s -w %s",
+	return fmt.Sprintf("%s %s -y %d -x %d -w %d",
 		s.getHostPort(), ServerForwarderFlag[s.Forwarder],
 		s.LowerThreshold, s.UpperThreshold, s.Weight)
 }

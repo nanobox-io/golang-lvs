@@ -1,8 +1,14 @@
+// Copyright (c) 2016 Pagoda Box Inc
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License, v.
+// 2.0. If a copy of the MPL was not distributed with this file, You can obtain one
+// at http://mozilla.org/MPL/2.0/.
+//
 package lvs
 
 import (
 	"fmt"
-	"os/exec"
+	// "os/exec"
 	"strings"
 	// "encoding/json"
 )
@@ -19,7 +25,7 @@ type (
 )
 
 var (
-	DefaultIpvs = Ipvs{}
+	DefaultIpvs = &Ipvs{}
 )
 
 func (i Ipvs) FindService(service Service) *Service {
@@ -32,6 +38,10 @@ func (i Ipvs) FindService(service Service) *Service {
 }
 
 func (i *Ipvs) AddService(service Service) error {
+	testService := i.FindService(service)
+	if testService != nil {
+		return nil
+	}
 	i.Services = append(i.Services, service)
 	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(),
 		"-s", ServiceSchedulerFlag[service.Scheduler],
@@ -57,7 +67,7 @@ func (i *Ipvs) RemoveService(service Service) error {
 			break
 		}
 	}
-	return backend("-D", ServiceTypeFlag[service.Type], service.getHostPort())
+	return backend("ipvsadm", "-D", ServiceTypeFlag[service.Type], service.getHostPort())
 }
 
 func (i *Ipvs) Clear() error {
@@ -79,13 +89,12 @@ func (i *Ipvs) Restore(services []Service) error {
 	for i := range services {
 		in = append(in, services[i].String())
 	}
-	return executeStdin(strings.Join(in, ""), "ipvsadm", "-R")
+	return backendStdin(strings.Join(in, ""), "ipvsadm", "-R")
 }
 
 func (i *Ipvs) Save() error {
 	i.Services = make([]Service, 0, 0)
-	cmd := exec.Command("ipvsadm", "-S", "-n")
-	out, err := cmd.Output()
+	out, err := backendRun([]string{"ipvsadm", "-S", "-n"})
 	if err != nil {
 		return err
 	}
