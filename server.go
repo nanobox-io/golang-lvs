@@ -15,14 +15,12 @@ import (
 
 type (
 	Server struct {
-		Host                string `json:"host"`
-		Port                int    `json:"port"`
-		Forwarder           string `json:"forwarder"`
-		Weight              int    `json:"weight"`
-		UpperThreshold      int    `json:upper_threshold`
-		LowerThreshold      int    `json:lower_threshold`
-		InactiveConnections int    `json:"innactive_connections"`
-		ActiveConnections   int    `json:"active_connections"`
+		Host           string `json:"host"`
+		Port           int    `json:"port"`
+		Forwarder      string `json:"forwarder"`
+		Weight         int    `json:"weight"`
+		UpperThreshold int    `json:upper_threshold`
+		LowerThreshold int    `json:lower_threshold`
 	}
 )
 
