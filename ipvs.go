@@ -45,7 +45,7 @@ func (i *Ipvs) AddService(service Service) error {
 	i.Services = append(i.Services, service)
 	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(),
 		"-s", ServiceSchedulerFlag[service.Scheduler],
-		"-p", fmt.Sprintf("%d", service.Persistance)}, strings.Split(service.getNetmask(), "")...)...)
+		"-p", fmt.Sprintf("%d", service.Persistence)}, strings.Split(service.getNetmask(), "")...)...)
 }
 
 func (i *Ipvs) EditService(service Service) error {
@@ -57,7 +57,7 @@ func (i *Ipvs) EditService(service Service) error {
 	}
 	return backend("ipvsadm", append([]string{"-E", ServiceTypeFlag[service.Type], service.getHostPort(),
 		"-s", ServiceSchedulerFlag[service.Scheduler],
-		"-p", fmt.Sprintf("%d", service.Persistance)}, strings.Split(service.getNetmask(), "")...)...)
+		"-p", fmt.Sprintf("%d", service.Persistence)}, strings.Split(service.getNetmask(), "")...)...)
 }
 
 func (i *Ipvs) RemoveService(service Service) error {

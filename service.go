@@ -19,7 +19,7 @@ type (
 		Port        int      `json:"port"`
 		Type        string   `json:"type"`
 		Scheduler   string   `json:"scheduler"`
-		Persistance int      `json:"persistance"`
+		Persistence int      `json:"persistence"`
 		Netmask     string   `json:"netmask"`
 		Servers     []Server `json:"servers"`
 	}
@@ -113,7 +113,7 @@ func (s Service) String() string {
 	a := make([]string, 0, 0)
 	a = append(a, fmt.Sprintf("-A %s %s -s %s -p %d %s\n",
 		ServiceTypeFlag[s.Type], s.getHostPort(),
-		ServiceSchedulerFlag[s.Scheduler], s.Persistance, s.getNetmask()))
+		ServiceSchedulerFlag[s.Scheduler], s.Persistence, s.getNetmask()))
 	for i := range s.Servers {
 		a = append(a, fmt.Sprintf("-a %s %s:%d -r %s\n",
 			ServiceTypeFlag[s.Type], s.Host, s.Port,
@@ -125,7 +125,7 @@ func (s Service) String() string {
 func (s Service) Add() error {
 	netmask := strings.Split(s.getNetmask(), " ")
 	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(),
-		ServiceSchedulerFlag[s.Scheduler], "-p", fmt.Sprintf("%d", s.Persistance)},
+		ServiceSchedulerFlag[s.Scheduler], "-p", fmt.Sprintf("%d", s.Persistence)},
 		netmask...)...)
 }
 
@@ -141,7 +141,7 @@ func parseService(serviceString string) Service {
 	service := Service{
 		Scheduler:   "wlc",
 		Type:        "tcp",
-		Persistance: 300,
+		Persistence: 300,
 	}
 	var err error
 	exploded := strings.Split(serviceString, " ")
@@ -159,9 +159,9 @@ func parseService(serviceString string) Service {
 		case "-s", "--scheduler":
 			service.Scheduler = exploded[i+1]
 		case "-p", "--persistent":
-			service.Persistance, err = strconv.Atoi(exploded[i+1])
+			service.Persistence, err = strconv.Atoi(exploded[i+1])
 			if err != nil {
-				service.Persistance = 300
+				service.Persistence = 300
 			}
 		case "-M", "--netmask":
 			service.Netmask = exploded[i+1]
