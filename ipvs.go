@@ -43,9 +43,19 @@ func (i *Ipvs) AddService(service Service) error {
 		return nil
 	}
 	i.Services = append(i.Services, service)
-	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(),
+	err := backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(),
 		"-s", ServiceSchedulerFlag[service.Scheduler],
 		"-p", fmt.Sprintf("%d", service.Persistence)}, strings.Split(service.getNetmask(), "")...)...)
+	if err != nil {
+		return err
+	}
+	for i := range service.Servers {
+		err := backend("ipvsadm", append([]string{"-a", ServiceTypeFlag[service.Type], service.getHostPort(), "-r"}, strings.Split(service.Servers[i].String(), " ")...)...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (i *Ipvs) EditService(service Service) error {
@@ -141,4 +151,8 @@ func (i Ipvs) StopDaemon() (error, error) {
 		return err1, err2
 	}
 	return nil, nil
+}
+
+func (i Ipvs) Zero() error {
+	return backend("ipvsadm", "-Z")
 }

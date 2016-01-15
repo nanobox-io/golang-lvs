@@ -9,7 +9,6 @@ package lvs
 import (
 	"errors"
 	"io"
-	"net"
 	"os/exec"
 )
 
@@ -69,6 +68,10 @@ func Save() error {
 	return DefaultIpvs.Save()
 }
 
+func Zero() error {
+	return DefaultIpvs.Zero()
+}
+
 func run(args []string) ([]byte, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	output, err := cmd.CombinedOutput()
@@ -104,13 +107,4 @@ func executeStdin(in, exe string, args ...string) error {
 		}
 	}
 	return cmd.Wait()
-}
-
-func validateId(id string) error {
-	_, _, err := net.SplitHostPort(id)
-	return err
-}
-
-func Zero() error {
-	return backend("ipvsadm", "-Z")
 }
