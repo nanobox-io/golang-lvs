@@ -106,5 +106,6 @@ func executeStdin(in, exe string, args ...string) error {
 			return err
 		}
 	}
+	stdin.Close()
 	return cmd.Wait()
 }
