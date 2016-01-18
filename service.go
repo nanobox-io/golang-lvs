@@ -8,6 +8,7 @@ package lvs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -46,7 +47,28 @@ var (
 		"nq":    "nq",
 		"":      "wlc", // default
 	}
+
+	InvalidServiceType      = errors.New("Invalid Service Type")
+	InvalidServiceScheduler = errors.New("Invalid Service Scheduler")
 )
+
+func (s Service) Validate() error {
+	_, ok := ServiceTypeFlag[s.Type]
+	if !ok {
+		return InvalidServiceType
+	}
+	_, ok = ServiceSchedulerFlag[s.Scheduler]
+	if !ok {
+		return InvalidServiceScheduler
+	}
+	for _, server := range s.Servers {
+		err := server.Validate()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (s Service) FindServer(server Server) *Server {
 	for i := range s.Servers {

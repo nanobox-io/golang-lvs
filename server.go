@@ -8,6 +8,7 @@ package lvs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -31,7 +32,17 @@ var (
 		"m": "-m",
 		"":  "-g", // default
 	}
+
+	InvalidServerForwarder = errors.New("Invalid Server Forwarder")
 )
+
+func (s Server) Validate() error {
+	_, ok := ServerForwarderFlag[s.Forwarder]
+	if !ok {
+		return InvalidServerForwarder
+	}
+	return nil
+}
 
 func (s *Server) FromJson(bytes []byte) error {
 	return json.Unmarshal(bytes, s)
