@@ -84,10 +84,15 @@ func run(args []string) ([]byte, error) {
 func execute(exe string, args ...string) error {
 	// fmt.Printf("%s\n", strings.Join(append([]string{exe}, args...), " "))
 	cmd := exec.Command(exe, args...)
-	return cmd.Run()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.New(err.Error() + ": " + string(output))
+	}
+	return nil
 }
 
 func executeStdin(in, exe string, args ...string) error {
+	// fmt.Printf("%s\n%s\n", strings.Join(append([]string{exe}, args...), " "), in)
 	var err error
 	var total, part, segment int
 	var stdin io.WriteCloser
