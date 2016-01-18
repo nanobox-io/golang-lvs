@@ -94,11 +94,19 @@ func (s Service) ToJson() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-func (s Service) getNetmask() string {
+func (s Service) getNetmask() []string {
 	if s.Netmask != "" {
-		return fmt.Sprintf("-M %s", s.Netmask)
+		return []string{"-M", s.Netmask}
 	} else {
-		return ""
+		return []string{}
+	}
+}
+
+func (s Service) getPersistence() []string {
+	if s.Persistence != 0 {
+		return []string{"-p", fmt.Sprintf("%d", s.Persistence)}
+	} else {
+		return []string{}
 	}
 }
 
@@ -111,9 +119,9 @@ func (s Service) getHostPort() string {
 
 func (s Service) String() string {
 	a := make([]string, 0, 0)
-	a = append(a, fmt.Sprintf("-A %s %s -s %s -p %d %s\n",
+	a = append(a, fmt.Sprintf("-A %s %s -s %s %s %s\n",
 		ServiceTypeFlag[s.Type], s.getHostPort(),
-		ServiceSchedulerFlag[s.Scheduler], s.Persistence, s.getNetmask()))
+		ServiceSchedulerFlag[s.Scheduler], strings.Join(s.getPersistence(), " "), strings.Join(s.getNetmask(), " ")))
 	for i := range s.Servers {
 		a = append(a, fmt.Sprintf("-a %s %s:%d -r %s\n",
 			ServiceTypeFlag[s.Type], s.Host, s.Port,
@@ -123,10 +131,7 @@ func (s Service) String() string {
 }
 
 func (s Service) Add() error {
-	netmask := strings.Split(s.getNetmask(), " ")
-	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(),
-		ServiceSchedulerFlag[s.Scheduler], "-p", fmt.Sprintf("%d", s.Persistence)},
-		netmask...)...)
+	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(), ServiceSchedulerFlag[s.Scheduler]}, append(s.getPersistence(), s.getNetmask()...)...)...)
 }
 
 func (s Service) Remove() error {

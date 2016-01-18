@@ -7,10 +7,7 @@
 package lvs
 
 import (
-	"fmt"
-	// "os/exec"
 	"strings"
-	// "encoding/json"
 )
 
 type (
@@ -43,9 +40,7 @@ func (i *Ipvs) AddService(service Service) error {
 		return nil
 	}
 	i.Services = append(i.Services, service)
-	err := backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(),
-		"-s", ServiceSchedulerFlag[service.Scheduler],
-		"-p", fmt.Sprintf("%d", service.Persistence)}, strings.Split(service.getNetmask(), "")...)...)
+	err := backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(), ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
 	if err != nil {
 		return err
 	}
@@ -65,9 +60,7 @@ func (i *Ipvs) EditService(service Service) error {
 			break
 		}
 	}
-	return backend("ipvsadm", append([]string{"-E", ServiceTypeFlag[service.Type], service.getHostPort(),
-		"-s", ServiceSchedulerFlag[service.Scheduler],
-		"-p", fmt.Sprintf("%d", service.Persistence)}, strings.Split(service.getNetmask(), "")...)...)
+	return backend("ipvsadm", append([]string{"-E", ServiceTypeFlag[service.Type], service.getHostPort(), ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
 }
 
 func (i *Ipvs) RemoveService(service Service) error {
