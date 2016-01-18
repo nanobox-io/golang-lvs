@@ -131,7 +131,7 @@ func (s Service) String() string {
 }
 
 func (s Service) Add() error {
-	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(), ServiceSchedulerFlag[s.Scheduler]}, append(s.getPersistence(), s.getNetmask()...)...)...)
+	return backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[s.Type], s.getHostPort(), "-s", ServiceSchedulerFlag[s.Scheduler]}, append(s.getPersistence(), s.getNetmask()...)...)...)
 }
 
 func (s Service) Remove() error {

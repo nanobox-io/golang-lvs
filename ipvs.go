@@ -40,7 +40,7 @@ func (i *Ipvs) AddService(service Service) error {
 		return nil
 	}
 	i.Services = append(i.Services, service)
-	err := backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(), ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
+	err := backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(), "-s", ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
 	if err != nil {
 		return err
 	}
