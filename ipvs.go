@@ -7,6 +7,7 @@
 package lvs
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -25,9 +26,9 @@ var (
 	DefaultIpvs = &Ipvs{}
 )
 
-func (i Ipvs) FindService(service Service) *Service {
+func (i Ipvs) FindService(netType, host string, port int) *Service {
 	for j := range i.Services {
-		if i.Services[j].Host == service.Host && i.Services[j].Port == service.Port && i.Services[j].Type == service.Type {
+		if i.Services[j].Host == host && i.Services[j].Port == port && i.Services[j].Type == netType {
 			return &i.Services[j]
 		}
 	}
@@ -35,12 +36,14 @@ func (i Ipvs) FindService(service Service) *Service {
 }
 
 func (i *Ipvs) AddService(service Service) error {
-	testService := i.FindService(service)
-	if testService != nil {
+	err := service.Validate()
+	if err != nil {
+		return err
+	}
+	if i.FindService(service.Type, service.Host, service.Port) != nil {
 		return nil
 	}
-	i.Services = append(i.Services, service)
-	err := backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(), "-s", ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
+	err = backend("ipvsadm", append([]string{"-A", ServiceTypeFlag[service.Type], service.getHostPort(), "-s", ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
 	if err != nil {
 		return err
 	}
@@ -50,32 +53,48 @@ func (i *Ipvs) AddService(service Service) error {
 			return err
 		}
 	}
+	i.Services = append(i.Services, service)
 	return nil
 }
 
 func (i *Ipvs) EditService(service Service) error {
+	err := backend("ipvsadm", append([]string{"-E", ServiceTypeFlag[service.Type], service.getHostPort(), ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
+	if err != nil {
+		return err
+	}
+
 	for j := range i.Services {
 		if i.Services[j].Host == service.Host && i.Services[j].Port == service.Port && i.Services[j].Type == service.Type {
 			i.Services = append(i.Services[:j], append([]Service{service}, i.Services[j+1:]...)...)
 			break
 		}
 	}
-	return backend("ipvsadm", append([]string{"-E", ServiceTypeFlag[service.Type], service.getHostPort(), ServiceSchedulerFlag[service.Scheduler]}, append(service.getPersistence(), service.getNetmask()...)...)...)
+	return nil
 }
 
-func (i *Ipvs) RemoveService(service Service) error {
+func (i *Ipvs) RemoveService(netType, host string, port int) error {
+	err := backend("ipvsadm", "-D", ServiceTypeFlag[netType], fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return err
+	}
+
 	for j := range i.Services {
-		if i.Services[j].Host == service.Host && i.Services[j].Port == service.Port && i.Services[j].Type == service.Type {
+		if i.Services[j].Host == host && i.Services[j].Port == port && i.Services[j].Type == netType {
 			i.Services = append(i.Services[:j], i.Services[j+1:]...)
 			break
 		}
 	}
-	return backend("ipvsadm", "-D", ServiceTypeFlag[service.Type], service.getHostPort())
+	return nil
 }
 
 func (i *Ipvs) Clear() error {
+	err := backend("ipvsadm", "-C")
+	if err != nil {
+		return err
+	}
+
 	i.Services = make([]Service, 0, 0)
-	return backend("ipvsadm", "-C")
+	return nil
 }
 
 func (i Ipvs) SetTimeouts() error {
@@ -86,21 +105,27 @@ func (i Ipvs) SetTimeouts() error {
 }
 
 func (i *Ipvs) Restore(services []Service) error {
-	i.Services = services
-	var in []string
-	in = make([]string, 0, 0)
+	in := make([]string, 0, 0)
 	for i := range services {
 		in = append(in, services[i].String())
 	}
-	return backendStdin(strings.Join(in, ""), "ipvsadm", "-R")
+	err := backendStdin(strings.Join(in, ""), "ipvsadm", "-R")
+	if err != nil {
+		return err
+	}
+
+	i.Services = services
+	return nil
 }
 
+// save reads the applied ipvsadm rules from the host and saves them as i.Services
 func (i *Ipvs) Save() error {
-	i.Services = make([]Service, 0, 0)
 	out, err := backendRun([]string{"ipvsadm", "-S", "-n"})
 	if err != nil {
 		return err
 	}
+
+	i.Services = make([]Service, 0, 0)
 	serviceStrings := strings.Split(string(out), "-A")
 	for j := range serviceStrings {
 		if serviceStrings[j] == "" {

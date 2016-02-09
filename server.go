@@ -34,6 +34,7 @@ var (
 	}
 
 	InvalidServerForwarder = errors.New("Invalid Server Forwarder")
+	InvalidServerPort      = errors.New("Invalid Server Port for Forwarder")
 )
 
 func (s Server) Validate() error {

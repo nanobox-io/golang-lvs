@@ -66,13 +66,17 @@ func (s Service) Validate() error {
 		if err != nil {
 			return err
 		}
+		// follow ipvsadm rules
+		if server.Forwarder != "m" && (s.Port != server.Port) {
+			return InvalidServerPort
+		}
 	}
 	return nil
 }
 
-func (s Service) FindServer(server Server) *Server {
+func (s Service) FindServer(host string, port int) *Server {
 	for i := range s.Servers {
-		if s.Servers[i].Host == server.Host && s.Servers[i].Port == server.Port {
+		if s.Servers[i].Host == host && s.Servers[i].Port == port {
 			return &s.Servers[i]
 		}
 	}
@@ -80,32 +84,61 @@ func (s Service) FindServer(server Server) *Server {
 }
 
 func (s *Service) AddServer(server Server) error {
-	testServer := s.FindServer(server)
-	if testServer != nil {
+	err := server.Validate()
+	if err != nil {
+		return err
+	}
+	if server.Forwarder != "m" && (s.Port != server.Port) {
+		return InvalidServerPort
+	}
+	if s.FindServer(server.Host, server.Port) != nil {
 		return nil
 	}
+	err = backend("ipvsadm", append([]string{"-a", ServiceTypeFlag[s.Type], s.getHostPort(), "-r"}, strings.Split(server.String(), " ")...)...)
+	if err != nil {
+		return err
+	}
+
 	s.Servers = append(s.Servers, server)
-	return backend("ipvsadm", append([]string{"-a", ServiceTypeFlag[s.Type], s.getHostPort(), "-r"}, strings.Split(server.String(), " ")...)...)
+	return nil
 }
 
 func (s *Service) EditServer(server Server) error {
+	err := server.Validate()
+	if err != nil {
+		return err
+	}
+	if server.Forwarder != "m" && (s.Port != server.Port) {
+		return InvalidServerPort
+	}
+
+	err = backend("ipvsadm", append([]string{"-e", ServiceTypeFlag[s.Type], s.getHostPort(), "-r"}, strings.Split(server.String(), " ")...)...)
+	if err != nil {
+		return err
+	}
+
 	for i := range s.Servers {
 		if s.Servers[i].Host == server.Host && s.Servers[i].Port == server.Port {
 			s.Servers = append(s.Servers[:i], append([]Server{server}, s.Servers[i+1:]...)...)
 			break
 		}
 	}
-	return backend("ipvsadm", append([]string{"-e", ServiceTypeFlag[s.Type], s.getHostPort(), "-r"}, strings.Split(server.String(), " ")...)...)
+	return nil
 }
 
-func (s *Service) RemoveServer(server Server) error {
+func (s *Service) RemoveServer(host string, port int) error {
+	err := backend("ipvsadm", "-d", ServiceTypeFlag[s.Type], s.getHostPort(), "-r", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return err
+	}
+
 	for i := range s.Servers {
-		if s.Servers[i].Host == server.Host && s.Servers[i].Port == server.Port {
+		if s.Servers[i].Host == host && s.Servers[i].Port == port {
 			s.Servers = append(s.Servers[:i], s.Servers[i+1:]...)
 			break
 		}
 	}
-	return backend("ipvsadm", "-d", ServiceTypeFlag[s.Type], s.getHostPort(), "-r", server.getHostPort())
+	return nil
 }
 
 func (s *Service) FromJson(bytes []byte) error {
